@@ -47,20 +47,22 @@ class Simplex{
         bool eIlimitado;
 
     public:
-        Simplex(std::vector <std::vector<float> > coeficientes,std::vector<float> b ,std::vector<float> c){
+        Simplex(std::vector <std::vector<float> > coeficientes,std::vector<float> b ,std::vector<float> c)
+        {
             maximo = 0;
             eIlimitado = false;
             linhas = coeficientes.size();
-            colunas = A[0].size();
+            colunas = coeficientes[0].size();
+            
             B.assign(b.begin(), b.end());
             C.assign(c.begin(), c.end()); 
-
+            
             for(int i= 0;i<linhas;i++)             //pass A[][] values to the metrix
                 A.push_back(coeficientes[i]);
 
 
             int j = 0;
-            
+
             for (int i = 0 ; i < C.size() ; i++)
             {
                 if (!C[i])
@@ -79,19 +81,27 @@ class Simplex{
             if(verificarSolucaoOtima()){
 			    return true;
             }
+
+             
             //find the column which has the pivot.The least coefficient of the objective function(C array).
             int colunaNumPivo = achaColunaPivo();
 
 
-            if(eIlimitado == true){
-                cout<<"Error unbounded"<<endl;
-			    return true;
-            }
+           
             
             //find the row with the pivot value.The least value item's row in the B array
             int linhaPivo = achaLinhaPivo(colunaNumPivo);
+
+            if(eIlimitado)
+            {
+                cout<<"Solução ilimitada."<<endl;
+                printMatrizes();
+			    return true;
+            }
             //form the next table according to the pivot value
             realizaPivoteamento(linhaPivo,colunaNumPivo);
+
+            
             return false;
         }
 
@@ -246,7 +256,6 @@ class Simplex{
         int achaLinhaPivo(int colunaNumPivo){
             float valoresPositivos[linhas];
             std::vector<float> resultado(linhas,0);
-            //float resultado[linhas];
             int contagemNumNegativos = 0;
 
             for(int i=0;i<linhas;i++){
@@ -277,23 +286,26 @@ class Simplex{
             //find the minimum's localizacao of the smallest item of the B array
             float minimo = 99999999;
             int localizacao = 0;
-            for(int i=0;i< resultado.size() ;i++){
-                if(resultado[i]>0){
-                    if(resultado[i]<minimo){
-                        minimo = resultado[i];
 
+            for(int i=0;i< resultado.size() ;i++)
+            {
+                if(resultado[i]>0)
+                {
+                    if ( resultado[i] < minimo )
+                    {
+                        minimo = resultado[i];
                         localizacao = i;
                     }
                 }
-
             }
-
+            
             return localizacao;
 
         }
 
-        void aplicaSimplex(){
-            bool fim= false;
+        void aplicaSimplex()
+        {
+            bool fim = false;
 
             cout<<"initial array(Not optimal)"<<endl;
             printMatrizes();
@@ -301,89 +313,66 @@ class Simplex{
             cout<<" "<<endl;
             cout<<"final array(Optimal solution)"<<endl;
 
-
-            while(!fim)
+            while ( !fim )
             {
-                bool resultado = calculaIteracaoSimplex();
+                bool resultado = calculaIteracaoSimplex();                
 
-                
-
-                if(resultado==true){
-
+                if (resultado==true)
                     fim= true;
-
-
-                    }
             }
-            cout<<"Answers for the Constraints of variables"<<endl;
 
-                std::map<float, int>::iterator it = base.begin();
-    // Iterate over the map using Iterator till end.
-    while (it != base.end())
-    {
-        cout << "x" << it->second + 1 << " " << it->first << " " << endl;
-        it++;
-    }
+            cout << "Variáveis básicas na última iteração: " << endl;
+
+            std::map<float, int>::iterator it = base.begin();
+
+            while (it != base.end())
+            {
+                cout << "x" << it->second + 1 << " " << it->first << " " << endl;
+                it++;
+            }
 
            cout<<""<<endl;
-           cout<<"maximum value: "<<maximo<<endl;  //print the maximum values
 
-
-
-
+           cout << "Solução ótima: " << maximo << endl;
         }
 
 };
 
 int main()
 {
+    int tamanhoColunaA; 
+    int tamanhoLinhaA; 
 
-    int tamanhoColunaA=6;  //should initialise columns size in A
-    int tamanhoLinhaA = 3;  //should initialise columns row in A[][] vector
+    cout << "Digite o número de coeficientes na função objetivo:" << endl;
+    cin >> tamanhoColunaA;
 
-    float C[]= {-6,-5,-4,0,0,0};  //should initialis the c arry here
-    float B[]={180, 300, 240};  // should initialis the b array here
+    cout << "Digite o número de restrições do problema:" << endl;
+    cin >> tamanhoLinhaA;
 
+    std::vector <std::vector<float>> a(tamanhoLinhaA, std::vector<float>(tamanhoColunaA, 0));
+    std::vector<float> b(tamanhoLinhaA,0);
+    std::vector<float> c(tamanhoColunaA,0);
 
+    for(int i=0 ; i<tamanhoLinhaA ; i++)
+    {    
+        cout << "Digite os coeficientes da restrição " + to_string(i + 1) << endl;
 
-    float a[tamanhoLinhaA][tamanhoColunaA] = {    //should intialis the A[][] array here
-                   { 2,  1,  1,   1,  0, 0},
-                { 1,  3,  2,   0,  1, 0 },
-                {   2,    1,  2,   0,  0,  1}
-             };
+        for(int j=0; j<tamanhoColunaA ; j++)
+            cin >> a[i][j];
+    }
 
+    cout << "Digite os valores do vetor B:\n";
+    for(int i=0;i<tamanhoLinhaA;i++)
+            cin >> b[i];
 
-        std::vector <std::vector<float> > vec2D(tamanhoLinhaA, std::vector<float>(tamanhoColunaA, 0));
+    cout << "Digite os coeficientes da função objetivo:\n";
+    for(int i=0;i<tamanhoColunaA;i++)
+        cin >> c[i];
 
-        std::vector<float> b(tamanhoLinhaA,0);
-        std::vector<float> c(tamanhoColunaA,0);
-
-
-
-
-       for(int i=0;i<tamanhoLinhaA;i++){         //make a vector from given array
-            for(int j=0; j<tamanhoColunaA;j++){
-                vec2D[i][j] = a[i][j];
-            }
-       }
-
-
-
-
-
-       for(int i=0;i<tamanhoLinhaA;i++){
-            b[i] = B[i];
-       }
-
-        for(int i=0;i<tamanhoColunaA;i++){
-            c[i] = C[i];
-       }
-
-
-      // hear the make the class parameters with A[m][n] vector b[] vector and c[] vector
-      Simplex simplex(vec2D,b,c);
-      simplex.aplicaSimplex();
-
+      
+    // hear the make the class parameters with A[m][n] vector b[] vector and c[] vector
+    Simplex simplex(a,b,c);
+    simplex.aplicaSimplex();
 
     return 0;
 }
