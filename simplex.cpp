@@ -1,7 +1,7 @@
 #include <iostream>
 #include <cmath>
 #include <vector>
-
+#include <map>
 using namespace std;
 
 /*
@@ -41,40 +41,34 @@ class Simplex{
         std::vector<float> B;
         //stores the coefficients of the objective function
         std::vector<float> C;
-
+        std::map<float, int> base;
         float maximo;
 
         bool eIlimitado;
 
     public:
-        Simplex(std::vector <std::vector<float> > matriz,std::vector<float> b ,std::vector<float> c){
+        Simplex(std::vector <std::vector<float> > coeficientes,std::vector<float> b ,std::vector<float> c){
             maximo = 0;
             eIlimitado = false;
-            linhas = matriz.size();
-            colunas = matriz[0].size();
-            A.resize( linhas , vector<float>( colunas , 0 ) );
-            B.resize(b.size());
-            C.resize(c.size());
+            linhas = coeficientes.size();
+            colunas = A[0].size();
+            B.assign(b.begin(), b.end());
+            C.assign(c.begin(), c.end()); 
+
+            for(int i= 0;i<linhas;i++)             //pass A[][] values to the metrix
+                A.push_back(coeficientes[i]);
 
 
-
-
-            for(int i= 0;i<linhas;i++){             //pass A[][] values to the metrix
-                for(int j= 0; j< colunas;j++ ){
-                    A[i][j] = matriz[i][j];
-
+            int j = 0;
+            
+            for (int i = 0 ; i < C.size() ; i++)
+            {
+                if (!C[i])
+                {
+                    base.insert( {B[j], i} );
+                    j++;
                 }
             }
-
-
-
-            for(int i=0; i< c.size() ;i++ ){      //pass c[] values to the B vector
-                C[i] = c[i] ;
-            }
-            for(int i=0; i< b.size();i++ ){      //pass b[] values to the B vector
-                B[i] = b[i];
-            }
-
 
 
 
@@ -85,7 +79,6 @@ class Simplex{
             if(verificarSolucaoOtima()){
 			    return true;
             }
-            cout << "teste" << endl;
             //find the column which has the pivot.The least coefficient of the objective function(C array).
             int colunaNumPivo = achaColunaPivo();
 
@@ -133,6 +126,7 @@ class Simplex{
             float linhaPivoAtualizada[colunas];//the row after processing the pivot value
 
             maximo = maximo - (C[colunaNumPivo]*(B[linhaPivo]/numPivo));  //set the maximum step by step
+
              //get the row that has the pivot value
              for(int i=0;i<colunas;i++){
                 valoresLinhaPivo[i] = A[linhaPivo][i];
@@ -141,7 +135,7 @@ class Simplex{
              for(int j=0;j<linhas;j++){
                 valoresColunaPivo[j] = A[j][colunaNumPivo];
             }
-
+            base.erase(B[linhaPivo]);
             //set the row values that has the pivot value divided by the pivot value and put into new row
              for(int k=0;k<colunas;k++){
                 linhaPivoAtualizada[k] = valoresLinhaPivo[k]/numPivo;
@@ -149,6 +143,8 @@ class Simplex{
 
             B[linhaPivo] = B[linhaPivo]/numPivo;
 
+            base.insert( {B[linhaPivo], colunaNumPivo} );
+            
 
              //process the other coefficients in the A array by subtracting
              for(int m=0;m<linhas;m++){
@@ -169,7 +165,16 @@ class Simplex{
                 if(i != linhaPivo){
 
                         float multiplyValue = valoresColunaPivo[i];
+                        cout << "DEBUG1     " << B[i] << endl;
+                        int bAntigo = B[i];
                         B[i] = B[i] - (multiplyValue*B[linhaPivo]);
+                        cout << "DEBUG2     " << B[i] << endl;
+                        if (base.find(bAntigo) != base.end())
+                        {
+                            int indice = base[bAntigo];
+                            base.erase(bAntigo);
+                            base.insert({B[i], indice});
+                        }
 
                 }
             }
@@ -187,6 +192,15 @@ class Simplex{
                 A[linhaPivo][i] = linhaPivoAtualizada[i];
              }
 
+             std::map<float, int>::iterator it = base.begin();
+    // Iterate over the map using Iterator till end.
+    while (it != base.end())
+    {
+        cout << it->first << " " << it->second << " " << endl;
+        it++;
+    }
+    cout << "   " << endl;
+
 
         }
 
@@ -197,6 +211,14 @@ class Simplex{
                     cout<<A[i][j] <<" ";
                 }
                 cout<<""<<endl;
+            }
+
+            for(int i=0; i<B.size();i++){
+                    cout<<B[i]<<" ";
+            }
+             cout<<""<<endl;
+            for(int i=0; i<C.size();i++){
+                    cout<<C[i]<<" ";
             }
             cout<<""<<endl;
         }
@@ -280,9 +302,11 @@ class Simplex{
             cout<<"final array(Optimal solution)"<<endl;
 
 
-            while(!fim){
-
+            while(!fim)
+            {
                 bool resultado = calculaIteracaoSimplex();
+
+                
 
                 if(resultado==true){
 
@@ -293,31 +317,13 @@ class Simplex{
             }
             cout<<"Answers for the Constraints of variables"<<endl;
 
-            for(int i=0;i< A.size(); i++){  //every basic column has the values, get it form B array
-                int numZeros = 0;
-                int indice = 0;
-                for(int j=0; j< linhas; j++){
-                    if(A[j][i]==0.0){
-                        numZeros += 1;
-                    }
-                    else if(A[j][i]==1){
-                        indice = j;
-                    }
-
-
-                }
-
-                if(numZeros == linhas -1 ){
-
-                    cout<<"variable"<<indice+1<<": "<<B[indice]<<endl;  //every basic column has the values, get it form B array
-                }
-                else{
-                    cout<<"variable"<<indice+1<<": "<<0<<endl;
-
-                }
-
-            }
-
+                std::map<float, int>::iterator it = base.begin();
+    // Iterate over the map using Iterator till end.
+    while (it != base.end())
+    {
+        cout << "x" << it->second + 1 << " " << it->first << " " << endl;
+        it++;
+    }
 
            cout<<""<<endl;
            cout<<"maximum value: "<<maximo<<endl;  //print the maximum values
@@ -332,17 +338,18 @@ class Simplex{
 int main()
 {
 
-    int tamanhoColunaA=4;  //should initialise columns size in A
-    int tamanhoLinhaA = 2;  //should initialise columns row in A[][] vector
+    int tamanhoColunaA=6;  //should initialise columns size in A
+    int tamanhoLinhaA = 3;  //should initialise columns row in A[][] vector
 
-    float C[]= {-70,-50,0,0};  //should initialis the c arry here
-    float B[]={240, 100};  // should initialis the b array here
+    float C[]= {-6,-5,-4,0,0,0};  //should initialis the c arry here
+    float B[]={180, 300, 240};  // should initialis the b array here
 
 
 
-    float a[2][4] = {    //should intialis the A[][] array here
-                   { 4,  3,  1, 0},
-                   { 2,  1,  0, 1},
+    float a[tamanhoLinhaA][tamanhoColunaA] = {    //should intialis the A[][] array here
+                   { 2,  1,  1,   1,  0, 0},
+                { 1,  3,  2,   0,  1, 0 },
+                {   2,    1,  2,   0,  0,  1}
              };
 
 
