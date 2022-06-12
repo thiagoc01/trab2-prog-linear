@@ -1,38 +1,13 @@
 #include <iostream>
 #include <cmath>
 #include <vector>
-#include <map>
+#include <iterator>
+#include <limits>
+
 using namespace std;
 
-/*
-The main method is in this program itself.
-Instructions for compiling=>>
-Run on any gcc compiler=>>
-Special***** should compile in -std=c++11 or C++14 -std=gnu++11  *********  (mat be other versions syntacs can be different)
-turorials point online compiler
-==> go ti link   http://cpp.sh/ or  https://www.tutorialspoint.com/cplusplus/indice.htm and click try it(scorel below) and after go to c++ editor copy code and paste.
-after that click button execute.
-if you have -std=c++11 you can run in command line;
-g++ -o output Simplex.cpp
-./output
-How to give inputs to the program =>>>
-   Example:
-	colSizeA = 6 // input colmn size
-	tamanhoLinhaA = 3  // input row size
-    float C[N]={-6,-5,-4,0,0,0};  //Initialize the C array  with the coefficients of the constraints of the objective function
-    float B[M]={240,360,300};//Initialize the B array constants of the constraints respectively
-   //initialize the A array by giving all the coefficients of all the variables
-   float A[M][N] =  {
-                 { 2,  1,  1,   1,  0, 0},
-                { 1,  3,  2,   0,  1, 0 },
-                {   2,    1,  2,   0,  0,  1}
-                };
-*/
-
-
-
-class Simplex{
-
+class Simplex
+{
     private:
         int linhas, colunas;
         //stores coefficients of all the variables
@@ -41,13 +16,12 @@ class Simplex{
         std::vector<float> B;
         //stores the coefficients of the objective function
         std::vector<float> C;
-        std::map<float, int> base;
+        std::vector< std::pair<int, float> > base;
         float maximo;
-
         bool eIlimitado;
 
     public:
-        Simplex(std::vector <std::vector<float> > coeficientes,std::vector<float> b ,std::vector<float> c)
+        Simplex (std::vector <std::vector<float>> coeficientes, std::vector<float> b, std::vector<float> c)
         {
             maximo = 0;
             eIlimitado = false;
@@ -57,9 +31,8 @@ class Simplex{
             B.assign(b.begin(), b.end());
             C.assign(c.begin(), c.end()); 
             
-            for(int i= 0;i<linhas;i++)             //pass A[][] values to the metrix
+            for (int i= 0;i<linhas;i++)             //pass A[][] values to the metrix
                 A.push_back(coeficientes[i]);
-
 
             int j = 0;
 
@@ -67,271 +40,205 @@ class Simplex{
             {
                 if (!C[i])
                 {
-                    base.insert( {B[j], i} );
+                    base.push_back( {i, B[j]} );
                     j++;
                 }
             }
-
-
-
         }
 
-        bool calculaIteracaoSimplex(){
+        bool calculaIteracaoSimplex()
+        {
             //check whether the table is optimal,if optimal no need to process further
-            if(verificarSolucaoOtima()){
+            if (verificarSolucaoOtima())
 			    return true;
-            }
-
              
             //find the column which has the pivot.The least coefficient of the objective function(C array).
-            int colunaNumPivo = achaColunaPivo();
-
-
-           
+            int colunaNumPivo = achaColunaPivo();           
             
             //find the row with the pivot value.The least value item's row in the B array
             int linhaPivo = achaLinhaPivo(colunaNumPivo);
 
-            if(eIlimitado)
+            if (eIlimitado)
             {
-                cout<<"Solução ilimitada."<<endl;
+                cout <<"Solução ilimitada."<< endl;
                 printMatrizes();
 			    return true;
             }
+
             //form the next table according to the pivot value
             realizaPivoteamento(linhaPivo,colunaNumPivo);
-
             
             return false;
         }
 
-        bool verificarSolucaoOtima(){
-             //if the table has further negative constraints,then it is not optimal
+        bool verificarSolucaoOtima()
+		{
+            //if the table has further negative constraints,then it is not optimal
             bool eOtima = false;
             int contagemNumPositivos = 0;
 
             //check if the coefficients of the objective function are negative
-            for(int i=0; i<C.size();i++){
+            for (int i = 0; i < C.size() ; i++)
+		    {
                 float value = C[i];
-                if(value >= 0){
+                if (value >= 0)
                     contagemNumPositivos++;
-                }
             }
             //if all the constraints are positive now,the table is optimal
-            if(contagemNumPositivos == C.size()){
+            if (contagemNumPositivos == C.size())
+            {
                 eOtima = true;
                 printMatrizes();
             }
             return eOtima;
         }
 
-        void realizaPivoteamento(int linhaPivo, int colunaNumPivo){
-
+        void realizaPivoteamento(int linhaPivo, int colunaNumPivo)
+        {
             float numPivo = A[linhaPivo][colunaNumPivo];//gets the pivot value
 
-            float valoresLinhaPivo[colunas];//the column with the pivot
+            maximo = maximo - (C[colunaNumPivo]*(B[linhaPivo]/numPivo));  //set the maximum step by step          
 
-            float valoresColunaPivo[linhas];//the row with the pivot
-
-            float linhaPivoAtualizada[colunas];//the row after processing the pivot value
-
-            maximo = maximo - (C[colunaNumPivo]*(B[linhaPivo]/numPivo));  //set the maximum step by step
-
-             //get the row that has the pivot value
-             for(int i=0;i<colunas;i++){
-                valoresLinhaPivo[i] = A[linhaPivo][i];
-             }
-             //get the column that has the pivot value
-             for(int j=0;j<linhas;j++){
-                valoresColunaPivo[j] = A[j][colunaNumPivo];
-            }
-            base.erase(B[linhaPivo]);
             //set the row values that has the pivot value divided by the pivot value and put into new row
-             for(int k=0;k<colunas;k++){
-                linhaPivoAtualizada[k] = valoresLinhaPivo[k]/numPivo;
-             }
+            for (int k = 0 ; k < colunas ; k++)
+                A[linhaPivo][k] = A[linhaPivo][k] / numPivo;
 
-            B[linhaPivo] = B[linhaPivo]/numPivo;
+            B[linhaPivo] = B[linhaPivo] / numPivo;
 
-            base.insert( {B[linhaPivo], colunaNumPivo} );
-            
-
-             //process the other coefficients in the A array by subtracting
-             for(int m=0;m<linhas;m++){
-                //ignore the pivot row as we already calculated that
-                if(m !=linhaPivo){
-                    for(int p=0;p<colunas;p++){
-                        float multiplyValue = valoresColunaPivo[m];
-                        A[m][p] = A[m][p] - (multiplyValue*linhaPivoAtualizada[p]);
-                        //C[p] = C[p] - (multiplyValue*C[linhaPivo]);
-                        //B[i] = B[i] - (multiplyValue*B[linhaPivo]);
-                    }
-
-                }
-             }
+            base[linhaPivo] = {colunaNumPivo, B[linhaPivo]};  
 
             //process the values of the B array
-            for(int i=0;i<B.size();i++){
-                if(i != linhaPivo){
-
-                        float multiplyValue = valoresColunaPivo[i];
-                        cout << "DEBUG1     " << B[i] << endl;
-                        int bAntigo = B[i];
-                        B[i] = B[i] - (multiplyValue*B[linhaPivo]);
-                        cout << "DEBUG2     " << B[i] << endl;
-                        if (base.find(bAntigo) != base.end())
-                        {
-                            int indice = base[bAntigo];
-                            base.erase(bAntigo);
-                            base.insert({B[i], indice});
-                        }
-
+            for (int i = 0 ; i < B.size() ; i++)
+            {
+                if (i != linhaPivo)
+                {
+                    float multiplicadorLinha =  A[i][colunaNumPivo];
+                    B[i] = B[i] - (multiplicadorLinha * B[linhaPivo]);
+                    base[i] = {base[i].first, B[i]};
                 }
-            }
-                //the least coefficient of the constraints of the objective function
-                float multiplyValue = C[colunaNumPivo];
-                //process the C array
-                 for(int i=0;i<C.size();i++){
-                    C[i] = C[i] - (multiplyValue*linhaPivoAtualizada[i]);
+            }          
 
+             //process the other coefficients in the A array by subtracting
+            for (int m = 0 ; m < linhas ; m++)
+            {
+                float multiplicadorLinha = A[m][colunaNumPivo];
+                //ignore the pivot row as we already calculated that
+                if (m != linhaPivo)
+                {
+                    for (int p = 0 ; p < colunas ; p++)                        
+                        A[m][p] = A[m][p] - (multiplicadorLinha * A[linhaPivo][p]);                    
                 }
+            }            
 
-
-             //replacing the pivot row in the new calculated A array
-             for(int i=0;i<colunas;i++){
-                A[linhaPivo][i] = linhaPivoAtualizada[i];
-             }
-
-             std::map<float, int>::iterator it = base.begin();
-    // Iterate over the map using Iterator till end.
-    while (it != base.end())
-    {
-        cout << it->first << " " << it->second << " " << endl;
-        it++;
-    }
-    cout << "   " << endl;
-
-
+            //the least coefficient of the constraints of the objective function
+            float multiplicadorLinha = C[colunaNumPivo];
+            //process the C array
+            for (int i = 0 ; i < C.size() ; i++)
+                C[i] = C[i] - (multiplicadorLinha * A[linhaPivo][i]);
         }
 
         //print the current A array
-        void printMatrizes(){
-            for(int i=0; i<linhas;i++){
-                for(int j=0;j<colunas;j++){
-                    cout<<A[i][j] <<" ";
-                }
-                cout<<""<<endl;
+        void printMatrizes()
+        {
+            for (int i = 0; i<linhas;i++)
+            {
+                for (int j = 0 ; j < colunas ; j++)
+                    cout << A[i][j] << " | ";
+                cout << endl;
             }
 
-            for(int i=0; i<B.size();i++){
-                    cout<<B[i]<<" ";
-            }
-             cout<<""<<endl;
-            for(int i=0; i<C.size();i++){
-                    cout<<C[i]<<" ";
-            }
-            cout<<""<<endl;
+            for (int i = 0; i<B.size();i++)
+                    cout << B[i] << " | ";
+
+            cout << endl;
+
+            for (int i = 0 ; i < C.size() ; i++)
+                    cout << C[i] << " | ";
+            cout << endl;
         }
 
         //find the least coefficients of constraints in the objective function's position
-        int achaColunaPivo(){
-
+        int achaColunaPivo()
+        {
             int localizacao = 0;
-            float minm = C[0];
+            float menor = C[0];
 
-
-
-            for(int i=1;i<C.size();i++){
-                if(C[i]<minm){
-                    minm = C[i];
+            for (int i = 1 ; i < C.size() ; i++)
+            {
+                if (C[i] < menor)
+                {
+                    menor = C[i];
                     localizacao = i;
                 }
             }
 
             return localizacao;
-
         }
 
         //find the row with the pivot value.The least value item's row in the B array
-        int achaLinhaPivo(int colunaNumPivo){
-            float valoresPositivos[linhas];
-            std::vector<float> resultado(linhas,0);
+        int achaLinhaPivo(int colunaNumPivo)
+        {
             int contagemNumNegativos = 0;
-
-            for(int i=0;i<linhas;i++){
-                if(A[i][colunaNumPivo]>0){
-                    valoresPositivos[i] = A[i][colunaNumPivo];
-                }
-                else{
-                    valoresPositivos[i]=0;
-                    contagemNumNegativos+=1;
-                }
-            }
-            //checking the unbound condition if all the values are negative ones
-            if(contagemNumNegativos==linhas){
-                eIlimitado = true;
-            }
-            else{
-                for(int i=0;i<linhas;i++){
-                    float value = valoresPositivos[i];
-                    if(value>0){
-                        resultado[i] = B[i]/value;
-
-                    }
-                    else{
-                        resultado[i] = 0;
-                    }
-                }
-            }
-            //find the minimum's localizacao of the smallest item of the B array
-            float minimo = 99999999;
+            float minimo = std::numeric_limits<float>::max();
             int localizacao = 0;
 
-            for(int i=0;i< resultado.size() ;i++)
+            for (int i = 0 ; i < linhas ; i++)
             {
-                if(resultado[i]>0)
+                if (A[i][colunaNumPivo] <= 0)
+                    contagemNumNegativos++;
+            }
+
+            //checking the unbound condition if all the values are negative ones
+            if (contagemNumNegativos == linhas)
+            {
+                eIlimitado = true;
+                return -1;
+            }
+
+            for (int i = 0 ; i < linhas ; i++)
+            {
+                if (A[i][colunaNumPivo] > 0)
                 {
-                    if ( resultado[i] < minimo )
-                    {
-                        minimo = resultado[i];
+                    if (B[i] / A[i][colunaNumPivo] < minimo)
+                    {              
+                        minimo =  B[i] / A[i][colunaNumPivo];
                         localizacao = i;
                     }
                 }
             }
-            
-            return localizacao;
 
+            return localizacao;
         }
 
         void aplicaSimplex()
         {
             bool fim = false;
 
-            cout<<"initial array(Not optimal)"<<endl;
+            cout <<"Matriz de coeficientes inicial " << endl;
             printMatrizes();
 
-            cout<<" "<<endl;
-            cout<<"final array(Optimal solution)"<<endl;
+            cout << endl;
+            cout << "Matriz de coeficientes final" << endl;
 
-            while ( !fim )
+            while (!fim)
             {
                 bool resultado = calculaIteracaoSimplex();                
 
-                if (resultado==true)
-                    fim= true;
+                if (resultado)
+                    fim = true;
             }
 
-            cout << "Variáveis básicas na última iteração: " << endl;
+            cout << endl << "Variáveis básicas na última iteração: " << endl;
 
-            std::map<float, int>::iterator it = base.begin();
+            auto it = base.begin();
 
             while (it != base.end())
             {
-                cout << "x" << it->second + 1 << " " << it->first << " " << endl;
+                cout << "x" << it->first + 1 << " " << it->second << " " << endl;
                 it++;
             }
 
-           cout<<""<<endl;
+           cout << endl;
 
            cout << "Solução ótima: " << maximo << endl;
         }
@@ -353,20 +260,20 @@ int main()
     std::vector<float> b(tamanhoLinhaA,0);
     std::vector<float> c(tamanhoColunaA,0);
 
-    for(int i=0 ; i<tamanhoLinhaA ; i++)
+    for (int i = 0 ; i < tamanhoLinhaA ; i++)
     {    
         cout << "Digite os coeficientes da restrição " + to_string(i + 1) << endl;
 
-        for(int j=0; j<tamanhoColunaA ; j++)
+        for (int j = 0 ; j < tamanhoColunaA ; j++)
             cin >> a[i][j];
     }
 
     cout << "Digite os valores do vetor B:\n";
-    for(int i=0;i<tamanhoLinhaA;i++)
+    for (int i = 0 ; i < tamanhoLinhaA ; i++)
             cin >> b[i];
 
     cout << "Digite os coeficientes da função objetivo:\n";
-    for(int i=0;i<tamanhoColunaA;i++)
+    for (int i = 0 ; i < tamanhoColunaA ; i++)
         cin >> c[i];
 
       
