@@ -6,7 +6,12 @@
 int main()
 {
     int tamanhoColunaA; 
-    int tamanhoLinhaA; 
+    int tamanhoLinhaA;
+    bool tipoProblema;
+
+    std::cout << "Se o problema for de maximização, digite 1. Caso contrário, digite 0." << std::endl;
+
+    std::cin >> tipoProblema;
 
     std::cout << "Digite o número de coeficientes na função objetivo:" << std::endl;
     std::cin >> tamanhoColunaA;
@@ -36,7 +41,7 @@ int main()
 
       
     // hear the make the class parameters with A[m][n] vector b[] vector and c[] vector
-    Simplex simplex(a,b,c);
+    Simplex simplex(a,b,c, tipoProblema);
     simplex.aplicaSimplex();
 
     return 0;

@@ -8,24 +8,43 @@
 
 using namespace std;
 
-Simplex::Simplex (std::vector <std::vector<float>> coeficientes, std::vector<float> b, std::vector<float> c)
+Simplex::Simplex (std::vector <std::vector<float>> coeficientes, std::vector<float> b, std::vector<float> c, bool tipoProblema)
 {
-    maximo = 0;
+    solucaoOtima = 0;
     eIlimitado = false;
+    semSolucao = false;
     linhas = coeficientes.size();
-    colunas = coeficientes[0].size();
+    colunas = coeficientes[0].size(); // O tamanho de uma linha indica o número de variáveis no problema.
     
-    B.assign(b.begin(), b.end());
-    C.assign(c.begin(), c.end()); 
+    B.assign(b.begin(), b.end()); // Inicializa o vetor B.
+
+    if (tipoProblema) // Se o problema for de maximização, basta copiar o vetor C e setar a booleana.
+    {
+        C.assign(c.begin(), c.end());
+        eMaximizacao = true;
+    }
+
+    else // Caso contrário, é necessário multiplicar a linha inteira por -1 para obtemos o problema equivalente e mantermos o mesmo código.
+    {
+        for (int i = 0 ; i < c.size() ; i++)
+        {
+            if (c[i] != 0)
+                C.push_back(c[i] * -1);
+            else
+                C.push_back(0);
+        }
+        
+        eMaximizacao = false;
+    }
     
-    for (int i= 0;i<linhas;i++)             //pass A[][] values to the metrix
-        A.push_back(coeficientes[i]);
+    for (int i = 0 ; i < linhas ; i++)
+        A.push_back(coeficientes[i]); // Inicializa a matriz A.
 
     int j = 0;
 
-    for (int i = 0 ; i < C.size() ; i++)
+    for (int i = C.size() - 1 ; i >= 0 ; i--)
     {
-        if (!C[i])
+        if (!C[i]) // As variáveis básicas têm coeficiente 0 no ínicio do problema.
         {
             base.push_back( {i, B[j]} );
             j++;
@@ -35,120 +54,140 @@ Simplex::Simplex (std::vector <std::vector<float>> coeficientes, std::vector<flo
 
 bool Simplex::calculaIteracaoSimplex()
 {
-    //check whether the table is optimal,if optimal no need to process further
+    int iteracao = 1;
+
     if (verificarSolucaoOtima())
         return true;
-        
-    //find the column which has the pivot.The least coefficient of the objective function(C array).
-    int colunaNumPivo = achaColunaPivo();           
-    
-    //find the row with the pivot value.The least value item's row in the B array
+
+    int colunaNumPivo = achaColunaPivo();
+
     int linhaPivo = achaLinhaPivo(colunaNumPivo);
 
     if (eIlimitado)
     {
-        cout <<"Solução ilimitada."<< endl;
-        printMatrizes();
+        cout << "Solução ilimitada." << endl;
         return true;
     }
 
-    //form the next table according to the pivot value
     realizaPivoteamento(linhaPivo,colunaNumPivo);
+
+    if (semSolucao)
+    {
+        cout << "O problema não possui solucão.\n";
+        return true;
+    }
+
+    cout << "Matriz de coeficientes e vetores B e C na iteração " + to_string(iteracao) << endl;
+
+    printMatrizes();
+
+    cout << endl;
+
+    cout << "Variáveis básicas na iteração " + to_string(iteracao) << endl;
+
+    auto it = base.begin();
+
+    while (it != base.end())
+    {
+        cout << "x" << it->first + 1 << " " << it->second << " " << endl;
+        it++;
+    }
+
+    iteracao++;
     
     return false;
 }
 
 bool Simplex::verificarSolucaoOtima()
 {
-    //if the table has further negative constraints,then it is not optimal
     bool eOtima = false;
     int contagemNumPositivos = 0;
 
-    //check if the coefficients of the objective function are negative
-    for (int i = 0; i < C.size() ; i++)
+    for (int i = 0 ; i < C.size() ; i++)
     {
-        float value = C[i];
-        if (value >= 0)
+        if (C[i] >= 0)
             contagemNumPositivos++;
     }
-    //if all the constraints are positive now,the table is optimal
+
     if (contagemNumPositivos == C.size())
-    {
         eOtima = true;
-        printMatrizes();
-    }
+
     return eOtima;
 }
 
 void Simplex::realizaPivoteamento(int linhaPivo, int colunaNumPivo)
 {
-    float numPivo = A[linhaPivo][colunaNumPivo];//gets the pivot value
+    float numPivo = A[linhaPivo][colunaNumPivo];
 
-    maximo = maximo - (C[colunaNumPivo]*(B[linhaPivo]/numPivo));  //set the maximum step by step          
+    solucaoOtima = solucaoOtima - (C[colunaNumPivo]*(B[linhaPivo]/numPivo));        
 
-    //set the row values that has the pivot value divided by the pivot value and put into new row
     for (int k = 0 ; k < colunas ; k++)
-        A[linhaPivo][k] = A[linhaPivo][k] / numPivo;
+        A[linhaPivo][k] = A[linhaPivo][k] / numPivo; // Divide a linha pivô pelo número pivô.
 
-    B[linhaPivo] = B[linhaPivo] / numPivo;
+    B[linhaPivo] = B[linhaPivo] / numPivo; // O vetor B está separado, realiza a mesma ação anterior.
 
-    base[linhaPivo] = {colunaNumPivo, B[linhaPivo]};  
+    base[linhaPivo] = {colunaNumPivo, B[linhaPivo]};  // Altera a base correspondente a essa linha.
 
-    //process the values of the B array
     for (int i = 0 ; i < B.size() ; i++)
     {
         if (i != linhaPivo)
         {
-            float multiplicadorLinha =  A[i][colunaNumPivo];
-            B[i] = B[i] - (multiplicadorLinha * B[linhaPivo]);
-            base[i] = {base[i].first, B[i]};
-        }
-    }          
+            float multiplicadorLinha =  A[i][colunaNumPivo]; // Capturamos o elemento que faz zerar o elemento B dessa linha.
 
-        //process the other coefficients in the A array by subtracting
+            B[i] = B[i] - (multiplicadorLinha * B[linhaPivo]); // Atualiza o B_i
+
+            if (B[i] < 0) // Se algum B[i] é menor que 0, o problema é inviável.
+                semSolucao = true;
+
+            base[i] = {base[i].first, B[i]}; // Atualiza no vetor de bases o valor de B_i.
+        }
+    } 
+
     for (int m = 0 ; m < linhas ; m++)
     {
-        float multiplicadorLinha = A[m][colunaNumPivo];
-        //ignore the pivot row as we already calculated that
+        float multiplicadorLinha = A[m][colunaNumPivo]; // Capturamos o elemento que faz zerar o elemento da coluna pivô dessa linha.
+
         if (m != linhaPivo)
         {
             for (int p = 0 ; p < colunas ; p++)                        
-                A[m][p] = A[m][p] - (multiplicadorLinha * A[linhaPivo][p]);                    
+                A[m][p] = A[m][p] - (multiplicadorLinha * A[linhaPivo][p]);  // Atualiza cada elemento da linha, realizando o pivoteamento.                 
         }
-    }            
+    }
 
-    //the least coefficient of the constraints of the objective function
+    /* Processo análogo para o vetor de coeficientes da função objetivo. */
+
     float multiplicadorLinha = C[colunaNumPivo];
-    //process the C array
+
     for (int i = 0 ; i < C.size() ; i++)
         C[i] = C[i] - (multiplicadorLinha * A[linhaPivo][i]);
 }
 
 void Simplex::printMatrizes()
 {
-    for (int i = 0; i<linhas;i++)
+    for (int i = 0 ; i < linhas ; i++)
     {
         for (int j = 0 ; j < colunas ; j++)
             cout << A[i][j] << " | ";
         cout << endl;
     }
 
-    for (int i = 0; i<B.size();i++)
-            cout << B[i] << " | ";
+    for (int i = 0 ; i < B.size() ; i++)
+        cout << B[i] << " | ";
 
     cout << endl;
 
     for (int i = 0 ; i < C.size() ; i++)
-            cout << C[i] << " | ";
+        cout << C[i] << " | ";
     cout << endl;
 }
 
 int Simplex::achaColunaPivo()
 {
+    /* Inicializamos tomando a primeira posição como o menor elemento */
     int localizacao = 0;
     float menor = C[0];
 
-    for (int i = 1 ; i < C.size() ; i++)
+    for (int i = 1 ; i < C.size() ; i++) // Realiza um procedimento comum para encontrar o menor
     {
         if (C[i] < menor)
         {
@@ -172,8 +211,7 @@ int Simplex::achaLinhaPivo(int colunaNumPivo)
             contagemNumNegativos++;
     }
 
-    //checking the unbound condition if all the values are negative ones
-    if (contagemNumNegativos == linhas)
+    if (contagemNumNegativos == linhas) // Critério de parada do Simplex. Se todos os coeficientes são 0 na função objetivo.
     {
         eIlimitado = true;
         return -1;
@@ -181,9 +219,9 @@ int Simplex::achaLinhaPivo(int colunaNumPivo)
 
     for (int i = 0 ; i < linhas ; i++)
     {
-        if (A[i][colunaNumPivo] > 0)
+        if (A[i][colunaNumPivo] > 0) // Iremos testar apenas linhas que possuem coeficientes positivos na coluna pivô.
         {
-            if (B[i] / A[i][colunaNumPivo] < minimo)
+            if (B[i] / A[i][colunaNumPivo] < minimo) // Devemos encontrar o mínimo.
             {              
                 minimo =  B[i] / A[i][colunaNumPivo];
                 localizacao = i;
@@ -198,31 +236,41 @@ void Simplex::aplicaSimplex()
 {
     bool fim = false;
 
-    cout <<"Matriz de coeficientes inicial " << endl;
+    cout << "Matriz de coeficientes e vetores B e C iniciais: " << endl;
     printMatrizes();
 
     cout << endl;
-    cout << "Matriz de coeficientes final" << endl;
 
     while (!fim)
     {
-        bool resultado = calculaIteracaoSimplex();                
+        bool resultado = calculaIteracaoSimplex();            
 
         if (resultado)
             fim = true;
     }
 
-    cout << endl << "Variáveis básicas na última iteração: " << endl;
-
-    auto it = base.begin();
-
-    while (it != base.end())
+    if (!semSolucao && !eIlimitado)
     {
-        cout << "x" << it->first + 1 << " " << it->second << " " << endl;
-        it++;
-    }
+        cout << "Matriz de coeficientes e vetores B e C finais: " << endl;
+        printMatrizes();
 
-    cout << endl;
+        cout << endl;
 
-    cout << "Solução ótima: " << maximo << endl;
+        cout << "Variáveis básicas na última iteração: " << endl;
+
+        auto it = base.begin();
+
+        while (it != base.end())
+        {
+            cout << "x" << it->first + 1 << " " << it->second << " " << endl;
+            it++;
+        }
+
+        cout << endl;
+
+        if (!eMaximizacao && solucaoOtima != 0)
+            solucaoOtima *= -1; // A implementação é baseada em maximização. Para obter a solução de uma minimização, basta multiplicar por -1.
+
+        cout << "Solução ótima: " << solucaoOtima << endl;
+    }    
 }
