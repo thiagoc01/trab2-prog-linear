@@ -7,14 +7,11 @@
 
 #include "simplex.hpp"
 
-using namespace std;
-
-Simplex::Simplex (std::vector <std::vector<float>> coeficientes, std::vector<float> b, std::vector<float> c, bool tipoProblema, bool eDuasFases, int numVarArtificiais, std::vector<int> ondeAdicionar)
+Simplex::Simplex (std::vector <std::vector<float>> coeficientes, std::vector<float> b, std::vector<float> c, bool tipoProblema, bool eDuasFases, int numVarArtificiais)
 {
     solucaoOtima = solucaoOtimaPrimeiraFase = 0;
     eIlimitado = false;
     semSolucao = false;
-    onde = ondeAdicionar;
     this->eDuasFases = eDuasFases;
     this->numVarArtificiais = numVarArtificiais;
     linhas = coeficientes.size();
@@ -28,9 +25,9 @@ Simplex::Simplex (std::vector <std::vector<float>> coeficientes, std::vector<flo
         eMaximizacao = true;
     }
 
-    else // Caso contrário, é necessário multiplicar a linha inteira por -1 para obtemos o problema equivalente e mantermos o mesmo código.
+    else // Caso contrário, é necessário multiplicar a linha inteira por -1 para obtermos o problema equivalente e mantermos o mesmo código.
     {
-        for (int i = 0 ; i < c.size() ; i++)
+        for (int i = 0 ; i < (int) c.size() ; i++)
         {
             if (c[i] != 0)
                 C.push_back(c[i] * -1);
@@ -45,13 +42,13 @@ Simplex::Simplex (std::vector <std::vector<float>> coeficientes, std::vector<flo
         A.push_back(coeficientes[i]); // Inicializa a matriz A.
 
     
-    if (!eDuasFases)
+    if (!eDuasFases) // Se o método tem primeira fase, a função iniciaPrimeiraFase trata as bases
     {
         int j = 0;
 
-        for (int i = C.size() - 1 ; i >= 0 ; i--)
+        for (int i = colunas - linhas - numVarArtificiais ; i < (int) C.size() ; i++)
         {
-            if (!C[i]) // As variáveis básicas têm coeficiente 0 no ínicio do problema.
+            if (!C[i]) // As variáveis básicas têm coeficiente 0 no início do problema.
             {
                 base.push_back( {i, B[j]} );
                 j++;
@@ -60,10 +57,8 @@ Simplex::Simplex (std::vector <std::vector<float>> coeficientes, std::vector<flo
     }
 }
 
-bool Simplex::calculaIteracaoSimplex()
+bool Simplex::calculaIteracaoSimplex(int iteracao)
 {
-    static int iteracao = 1;
-
     if (verificarSolucaoOtima())
         return true;
 
@@ -73,7 +68,7 @@ bool Simplex::calculaIteracaoSimplex()
 
     if (eIlimitado)
     {
-        cout << "Solução ilimitada.\n" << endl;
+        std::cout << "Solução ilimitada.\n" << std::endl;
         return true;
     }
 
@@ -81,28 +76,66 @@ bool Simplex::calculaIteracaoSimplex()
 
     if (semSolucao)
     {
-        cout << "O problema não possui solucão.\n";
+        std::cout << "O problema não possui solucão.\n";
         return true;
     }
 
-    cout << "Matriz de coeficientes e vetores B e C na iteração " + to_string(iteracao) << endl;
+    if (eDuasFases)
+    {
+        std::cout << "Matriz de coeficientes e vetores B, C e C auxiliar na iteração " + std::to_string(iteracao) << std::endl;
+        std::cout << "====================================================" << std::endl;
+    }
+
+    else
+    {
+       std::cout << "Matriz de coeficientes e vetores B e C na iteração " + std::to_string(iteracao) << std::endl;
+        std::cout << "====================================================" << std::endl;
+    }    
 
     printMatrizes();
 
-    cout << endl;
+    std::cout << std::endl;
 
-    cout << "Variáveis básicas na iteração " + to_string(iteracao) << endl;
+    std::cout << "Variáveis básicas na iteração " + std::to_string(iteracao) << std::endl;
+    std::cout << "====================================================" << std::endl;
 
     auto it = base.begin();
 
     while (it != base.end())
     {
-        cout << "x" << it->first + 1 << " " << it->second << " " << endl;
+        std::cout << "x" << it->first + 1 << " " << it->second << " " << std::endl;
         it++;
     }
 
-    iteracao++;
+    std::cout << std::endl;
+
+    if (eDuasFases)
+    {
+        std::cout << "Solução do PPL auxiliar na iteração " + std::to_string(iteracao) << std::endl;
+        std::cout << "====================================================" << std::endl;
+        std::cout << solucaoOtimaPrimeiraFase << std::endl;
+        std::cout << std::endl;
+        std::cout << "Solução do PPL na iteração " + std::to_string(iteracao) << std::endl;
+        std::cout << "====================================================" << std::endl;
+        std::cout << solucaoOtima * -1 << std::endl;
+        std::cout << std::endl;
+    }
+
+    else
+    {
+        std::cout << "Solução do PPL na iteração " + std::to_string(iteracao) << std::endl;
+        std::cout << "====================================================" << std::endl;
+
+        if (!eMaximizacao && solucaoOtima != 0)
+            std::cout << solucaoOtima * -1 << std::endl;
+        else
+            std::cout << solucaoOtima << std::endl;
+
+        std::cout << std::endl;
+    }
+
     
+
     return false;
 }
 
@@ -113,25 +146,25 @@ bool Simplex::verificarSolucaoOtima()
 
     if (eDuasFases)
     {
-        for (int i = 0 ; i < C_artificial.size() ; i++)
+        for (int i = 0 ; i < (int) C_artificial.size() ; i++)
         {
             if (C_artificial[i] >= 0)
                 contagemNumPositivos++;
         }
 
-        if (contagemNumPositivos == C_artificial.size())
+        if (contagemNumPositivos == (int) C_artificial.size())
             eOtima = true;
     }
 
     else
     {
-        for (int i = 0 ; i < C.size() ; i++)
+        for (int i = 0 ; i < (int) C.size() ; i++)
         {
             if (C[i] >= 0)
                 contagemNumPositivos++;
         }
 
-        if (contagemNumPositivos == C.size())
+        if (contagemNumPositivos == (int) C.size())
             eOtima = true;
     }   
 
@@ -143,9 +176,9 @@ void Simplex::realizaPivoteamento(int linhaPivo, int colunaNumPivo)
     float numPivo = A[linhaPivo][colunaNumPivo];
 
     if (eDuasFases)
-        solucaoOtimaPrimeiraFase = solucaoOtimaPrimeiraFase - (C_artificial[colunaNumPivo]*(B[linhaPivo]/numPivo));
+        solucaoOtimaPrimeiraFase = solucaoOtimaPrimeiraFase - (C_artificial[colunaNumPivo] * (B[linhaPivo] / numPivo));
 
-    solucaoOtima = solucaoOtima - (C[colunaNumPivo]*(B[linhaPivo]/numPivo));           
+    solucaoOtima = solucaoOtima - (C[colunaNumPivo] * (B[linhaPivo] / numPivo));           
 
     for (int k = 0 ; k < colunas ; k++)
         A[linhaPivo][k] = A[linhaPivo][k] / numPivo; // Divide a linha pivô pelo número pivô.
@@ -154,7 +187,7 @@ void Simplex::realizaPivoteamento(int linhaPivo, int colunaNumPivo)
 
     base[linhaPivo] = {colunaNumPivo, B[linhaPivo]};  // Altera a base correspondente a essa linha.
 
-    for (int i = 0 ; i < B.size() ; i++)
+    for (int i = 0 ; i < (int) B.size() ; i++)
     {
         if (i != linhaPivo)
         {
@@ -186,44 +219,44 @@ void Simplex::realizaPivoteamento(int linhaPivo, int colunaNumPivo)
     for (int i = 0 ; i < colunas ; i++)
         C[i] = C[i] - (multiplicadorLinha * A[linhaPivo][i]);
 
-    if (eDuasFases)
+    if (eDuasFases) // Se estamos na primeira fase, é necessário trabalhar com a função objetivo artificial.
     {
         multiplicadorLinha = C_artificial[colunaNumPivo];
 
-        for (int i = 0 ; i < C_artificial.size() ; i++)
+        for (int i = 0 ; i < (int) C_artificial.size() ; i++)
             C_artificial[i] = C_artificial[i] - (multiplicadorLinha * A[linhaPivo][i]);
     }
 }
 
 void Simplex::printMatrizes()
 {
-    cout << "Matriz A: \n";
+    std::cout << "Matriz A: \n";
 
     for (int i = 0 ; i < linhas ; i++)
     {
         for (int j = 0 ; j < colunas ; j++)
-            cout << A[i][j] << " | ";
-        cout << endl;
+            std::cout << A[i][j] << " | ";
+        std::cout << std::endl;
     }
 
-    cout << "Vetor B: \n";
-    for (int i = 0 ; i < B.size() ; i++)
-        cout << B[i] << " | ";
+    std::cout << "Vetor B: \n";
+    for (int i = 0 ; i < (int) B.size() ; i++)
+        std::cout << B[i] << " | ";
 
-    cout << endl;
+    std::cout << std::endl;
 
-    cout << "Vetor C: \n";
-    for (int i = 0 ; i < C.size() ; i++)
-        cout << C[i] << " | ";
-    cout << endl;
+    std::cout << "Vetor C: \n";
+    for (int i = 0 ; i < (int) C.size() ; i++)
+        std::cout << C[i] << " | ";
+    std::cout << std::endl;
 
     if (eDuasFases)
     {
-        cout << "Vetor C artificial: \n";
-        for (int i = 0 ; i < C_artificial.size() ; i++)
-            cout << C_artificial[i] << " | ";
+        std::cout << "Vetor C artificial: \n";
+        for (int i = 0 ; i < (int) C_artificial.size() ; i++)
+            std::cout << C_artificial[i] << " | ";
     }
-    cout << endl;
+    std::cout << std::endl;
 }
 
 int Simplex::achaColunaPivo()
@@ -236,7 +269,7 @@ int Simplex::achaColunaPivo()
     {
         menor = C_artificial[0];
 
-        for (int i = 1 ; i < C_artificial.size() ; i++) // Realiza um procedimento comum para encontrar o menor
+        for (int i = 1 ; i < (int) C_artificial.size() ; i++) // Realiza um procedimento comum para encontrar o menor
         {
             if (C_artificial[i] < menor)
             {
@@ -250,7 +283,7 @@ int Simplex::achaColunaPivo()
     {
         menor = C[0];
 
-        for (int i = 1 ; i < C.size() ; i++) // Realiza um procedimento comum para encontrar o menor
+        for (int i = 1 ; i < (int) C.size() ; i++) // Realiza um procedimento comum para encontrar o menor
         {
             if (C[i] < menor)
             {
@@ -297,20 +330,12 @@ int Simplex::achaLinhaPivo(int colunaNumPivo)
     return localizacao;
 }
 
-bool Simplex::iniciaPrimeiraFase()
+bool Simplex::iniciaPrimeiraFase(std::vector<int> ondeAdicionar)
 {
-    vector<int> artificiais;
-    C_artificial.resize(colunas-numVarArtificiais, 0);
+    C_artificial.resize(colunas - numVarArtificiais, 0); // Os coeficientes do problema original são 0
 
-    for (int i = 1 ; i <= numVarArtificiais ; i++)
+    for (int i = 1 ; i <= numVarArtificiais ; i++) // As variáveis artificiais entram à direita e são 1
         C_artificial.push_back(1);
-
-    cout << "Coeficientes da função objetivo artificial: \n";
-
-    for (int i = 0 ; i < colunas ; i++)
-        cout << C_artificial[i] << " ";
-
-    cout << endl;
 
     int k = 0;
 
@@ -318,84 +343,88 @@ bool Simplex::iniciaPrimeiraFase()
     {
         for (int j = colunas - linhas - numVarArtificiais ; j < colunas ; j++)
         {
-            if (A[i][j] == 1)
+            if (A[i][j] == 1) // Se há 1 nessa linha, a variável é de folga ou artificial, deve entrar na base.
             {
                 base.push_back( {j, B[k]} );
                 k++;
                 break;
             }
         }
-        if (std::find(onde.begin(), onde.end(), i) != onde.end())
-            artificiais.push_back(i);
-    }
-    
-    for (int i = 0 ; i < base.size() ; i++)
-        cout << base[i].first << " " << base[i].second << endl;    
+    } 
 
-    for (int i = 0 ; i < artificiais.size() ; i++)
+    for (int i = 0 ; i < (int) ondeAdicionar.size() ; i++) // Coloca na forma canônica o tableau
     {
         for (int j = 0 ; j < colunas ; j++)
-            C_artificial[j] = C_artificial[j] - A[artificiais[i]][j];
+            C_artificial[j] = C_artificial[j] - A[ondeAdicionar[i]][j]; // Pivoteia a função objetivo artificial com as linhas da base que são da variável artificial
         
-        solucaoOtimaPrimeiraFase -= B[artificiais[i]];
+        solucaoOtimaPrimeiraFase -= B[ondeAdicionar[i]];
     }
 
     printMatrizes();
-    cout << "\n\n\n\n\n";
-    realizaPrimeiraFase();
-    
-    return true;
+    std::cout << "\n\n";
+
+    return realizaPrimeiraFase(); // Função objetivo auxiliar criada e matriz A ajustada. Pronto para começar o procedimento da primeira fase.
 
 }
 
 bool Simplex::realizaPrimeiraFase()
 {
     bool fim = false;
+    int iteracao = 1;
 
     while ( !fim )
     {
-        bool resultado = calculaIteracaoSimplex();            
+        bool resultado = calculaIteracaoSimplex(iteracao);
+        iteracao++;           
 
         if (resultado)
             fim = true;
     }
-    cout << "Fim da primeira fase.\n\n";
+    std::cout << "Fim da primeira fase.\n\n";
     
 
-    if (solucaoOtimaPrimeiraFase == 0)
+    if (solucaoOtimaPrimeiraFase == 0) // Problema original tem solução
     {
-        cout << "O problema possui solução.\n";
-        cout << "Iniciando a segunda fase...\n";
+        std::cout << "O problema possui solução.\n";
+        std::cout << "====================================================\n" << std::endl;
+        std::cout << "Iniciando a segunda fase...\n\n";
         C_artificial.clear();
 
         for (int i = 0 ; i < numVarArtificiais ; i++)
-            C.pop_back();
+            C.pop_back(); // Remove as variáveis artificiais da função objetivo original
 
         for (int i = 0 ; i < linhas ; i++)
         {
             for (int j = 0 ; j < numVarArtificiais ; j++)
-                A[i].pop_back();
+                A[i].pop_back(); // Remove as variáveis artificiais da função objetivo original
         }
 
-        colunas = C.size();
+        colunas = C.size(); // Número de variáveis sem as artificiais
         
-        eDuasFases = false;
+        eDuasFases = false; // Encerramos a primeira fase
+
         return true;
     }
 
     else
     {
-        cout << "O problema não possui solução.\n";
+        std::cout << "O problema não possui solução.\n"; // Não há por que continuar, encerramos.
+        std::cout << "====================================================" << std::endl;
+        semSolucao = true;
         return false;
     }
 }
 
-void Simplex::aplicaSimplex()
+void Simplex::aplicaSimplex(std::vector<int> ondeAdicionar)
 {
+    int iteracao = 1;
+
     if (eDuasFases)
     {
-        cout << "O método de duas fases deve ser aplicado. Iniciando primeira fase... \n";
-        bool temSegundaFase = iniciaPrimeiraFase();
+        std::cout << "O método de duas fases deve ser aplicado. Iniciando primeira fase... \n\n";
+        std::cout << "Matriz de coeficientes e vetores B, C e C artificial iniciais: " << std::endl;
+        std::cout << "====================================================" << std::endl;
+        bool temSegundaFase = iniciaPrimeiraFase(ondeAdicionar);
 
         if (!temSegundaFase)
             return;
@@ -403,14 +432,17 @@ void Simplex::aplicaSimplex()
 
     bool fim = false;
 
-    cout << "Matriz de coeficientes e vetores B e C iniciais: " << endl;
+    std::cout << "Matriz de coeficientes e vetores B e C iniciais: " << std::endl;
+    std::cout << "====================================================" << std::endl;
     printMatrizes();
 
-    cout << endl;
+    std::cout << std::endl;
 
     while (!fim)
     {
-        bool resultado = calculaIteracaoSimplex();            
+        bool resultado = calculaIteracaoSimplex(iteracao);
+
+        iteracao++;           
 
         if (resultado)
             fim = true;
@@ -418,26 +450,29 @@ void Simplex::aplicaSimplex()
 
     if (!semSolucao && !eIlimitado)
     {
-        cout << "Matriz de coeficientes e vetores B e C finais: " << endl;
+        std::cout << "Matriz de coeficientes e vetores B e C finais: " << std::endl;
+        std::cout << "====================================================" << std::endl;
         printMatrizes();
 
-        cout << endl;
+        std::cout << std::endl;
 
-        cout << "Variáveis básicas na última iteração: " << endl;
+        std::cout << "Variáveis básicas na última iteração: " << std::endl;
+        std::cout << "====================================================" << std::endl;
 
         auto it = base.begin();
 
         while (it != base.end())
         {
-            cout << "x" << it->first + 1 << " " << it->second << " " << endl;
+            std::cout << "x" << it->first + 1 << " " << it->second << " " << std::endl;
             it++;
         }
 
-        cout << endl;
+        std::cout << std::endl;
 
         if (!eMaximizacao && solucaoOtima != 0)
             solucaoOtima *= -1; // A implementação é baseada em maximização. Para obter a solução de uma minimização, basta multiplicar por -1.
 
-        cout << "Solução ótima: " << solucaoOtima << endl;
+        std::cout << "Solução ótima: " << solucaoOtima << std::endl;
+        std::cout << "====================================================" << std::endl;
     }    
 }

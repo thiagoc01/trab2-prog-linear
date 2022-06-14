@@ -4,8 +4,7 @@
 #include <vector>
 
 /**
- * @brief Implementa somente a segunda fase do método Simplex.
-        É necessário que o problema tenha solução viável inicial e não tenha restrições do tipo >=.
+ * @brief Implementa o método Simplex e o método de duas fases.
  * 
  */
 
@@ -13,40 +12,29 @@ class Simplex
 {
     private:
         int linhas, colunas; // Linhas = número de restrições ; Colunas = número de variáveis
-        int numVarArtificiais;
+        int numVarArtificiais; // Número de variáveis artificiais no problema
         std::vector <std::vector<float> > A; // Matriz dos coeficientes das restrições
         std::vector<float> B; // Vetor de soluções das restrições
         std::vector<float> C; // Vetor de coeficientes da função objetivo.
         std::vector< std::pair<int, float> > base; // Vetor de pares para mapearmos as bases e os B_i's respectivos
-        std::vector <float> C_artificial;
+        std::vector <float> C_artificial; // Vetor de coeficientes da função objetivo artificial da primeira fase
         float solucaoOtima; // Solução ótima do problema
-        float solucaoOtimaPrimeiraFase;
+        float solucaoOtimaPrimeiraFase; // Solução ótima da primeira fase
         bool eIlimitado; // Caso que o problema é ilimitado
         bool eMaximizacao; // Utilizada para verificar se o problema é de maximização ou não.
         bool semSolucao; // Caso que o problema não possui solução.
-        bool eDuasFases;
-        std::vector<int> onde;
-
-    public:
-        /**
-         * @brief Construtor da classe
-         * 
-         * @param coeficientes Coeficientes da matriz A
-         * @param b Vetor de soluções de cada restrição
-         * @param c Vetor de coeficientes da função objetivo
-         * @param tipoProblema true se é de maximização, false se é de minimização.
-         * @param eDuasFases true se o problema tem duas fases, false caso contrário.
-         */
-        Simplex (std::vector <std::vector<float>> coeficientes, std::vector<float> b, std::vector<float> c, bool tipoProblema, bool eDuasFases, int numVarArtificiais, std::vector<int> ondeAdicionar);
+        bool eDuasFases; // Verificador se estamos na primeira fase ou na segunda        
 
         /**
          * @brief Realiza o cálculo de uma iteração da segunda fase do Simplex.
+         * 
+         * @param iteracao O número da iteração
          * 
          * @return true - Se a iteração for final por algum motivo do problema.
          * @return false - Se ainda há possibilidade de maximizar/minimizar.
          */
 
-        bool calculaIteracaoSimplex();
+        bool calculaIteracaoSimplex(int iteracao);
 
         /**
          * @brief Verifica se todos os coeficientes são positivos ou nulos.
@@ -86,14 +74,41 @@ class Simplex
         int achaLinhaPivo(int colunaNumPivo);
 
         /**
-         * @brief Método que inicia o método Simplex.
+         * @brief Prepara o PPL artificial para a primeira fase do método de duas fases
          * 
+         * @param ondeAdicionar Vetor que contém as linhas que têm variáveis artificiais
+         * @return true - Se o PPL original tem solução
+         * @return false - Caso o PPL original não tenha solução
          */
-        void aplicaSimplex();
 
-        bool iniciaPrimeiraFase();
+        bool iniciaPrimeiraFase(std::vector<int> ondeAdicionar);
+
+        /**
+         * @brief Realiza o controle da primeira fase, a análise do resultado e a remoção das variáveis artificiais
+         * 
+         * @return true - Se o PPL original tem solução
+         * @return false - Caso o PPL original não tenha solução
+         */
 
         bool realizaPrimeiraFase();
+
+    public:
+        /**
+         * @brief Construtor da classe
+         * 
+         * @param coeficientes Coeficientes da matriz A
+         * @param b Vetor de soluções de cada restrição
+         * @param c Vetor de coeficientes da função objetivo
+         * @param tipoProblema true se é de maximização, false se é de minimização.
+         * @param eDuasFases true se o problema tem duas fases, false caso contrário.
+         */
+        Simplex (std::vector <std::vector<float>> coeficientes, std::vector<float> b, std::vector<float> c, bool tipoProblema, bool eDuasFases, int numVarArtificiais);        
+
+        /**
+         * @brief Função que inicia o método Simplex.
+         * 
+         */
+        void aplicaSimplex(std::vector<int> ondeAdicionar);        
 };
 
 #endif
