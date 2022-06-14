@@ -3,16 +3,20 @@
 #include <vector>
 #include <iterator>
 #include <limits>
+#include <algorithm>
 
 #include "simplex.hpp"
 
 using namespace std;
 
-Simplex::Simplex (std::vector <std::vector<float>> coeficientes, std::vector<float> b, std::vector<float> c, bool tipoProblema)
+Simplex::Simplex (std::vector <std::vector<float>> coeficientes, std::vector<float> b, std::vector<float> c, bool tipoProblema, bool eDuasFases, int numVarArtificiais, std::vector<int> ondeAdicionar)
 {
-    solucaoOtima = 0;
+    solucaoOtima = solucaoOtimaPrimeiraFase = 0;
     eIlimitado = false;
     semSolucao = false;
+    onde = ondeAdicionar;
+    this->eDuasFases = eDuasFases;
+    this->numVarArtificiais = numVarArtificiais;
     linhas = coeficientes.size();
     colunas = coeficientes[0].size(); // O tamanho de uma linha indica o número de variáveis no problema.
     
@@ -40,21 +44,25 @@ Simplex::Simplex (std::vector <std::vector<float>> coeficientes, std::vector<flo
     for (int i = 0 ; i < linhas ; i++)
         A.push_back(coeficientes[i]); // Inicializa a matriz A.
 
-    int j = 0;
-
-    for (int i = C.size() - 1 ; i >= 0 ; i--)
+    
+    if (!eDuasFases)
     {
-        if (!C[i]) // As variáveis básicas têm coeficiente 0 no ínicio do problema.
+        int j = 0;
+
+        for (int i = C.size() - 1 ; i >= 0 ; i--)
         {
-            base.push_back( {i, B[j]} );
-            j++;
+            if (!C[i]) // As variáveis básicas têm coeficiente 0 no ínicio do problema.
+            {
+                base.push_back( {i, B[j]} );
+                j++;
+            }
         }
     }
 }
 
 bool Simplex::calculaIteracaoSimplex()
 {
-    int iteracao = 1;
+    static int iteracao = 1;
 
     if (verificarSolucaoOtima())
         return true;
@@ -65,11 +73,11 @@ bool Simplex::calculaIteracaoSimplex()
 
     if (eIlimitado)
     {
-        cout << "Solução ilimitada." << endl;
+        cout << "Solução ilimitada.\n" << endl;
         return true;
     }
 
-    realizaPivoteamento(linhaPivo,colunaNumPivo);
+    realizaPivoteamento(linhaPivo, colunaNumPivo);
 
     if (semSolucao)
     {
@@ -103,14 +111,29 @@ bool Simplex::verificarSolucaoOtima()
     bool eOtima = false;
     int contagemNumPositivos = 0;
 
-    for (int i = 0 ; i < C.size() ; i++)
+    if (eDuasFases)
     {
-        if (C[i] >= 0)
-            contagemNumPositivos++;
+        for (int i = 0 ; i < C_artificial.size() ; i++)
+        {
+            if (C_artificial[i] >= 0)
+                contagemNumPositivos++;
+        }
+
+        if (contagemNumPositivos == C_artificial.size())
+            eOtima = true;
     }
 
-    if (contagemNumPositivos == C.size())
-        eOtima = true;
+    else
+    {
+        for (int i = 0 ; i < C.size() ; i++)
+        {
+            if (C[i] >= 0)
+                contagemNumPositivos++;
+        }
+
+        if (contagemNumPositivos == C.size())
+            eOtima = true;
+    }   
 
     return eOtima;
 }
@@ -119,7 +142,10 @@ void Simplex::realizaPivoteamento(int linhaPivo, int colunaNumPivo)
 {
     float numPivo = A[linhaPivo][colunaNumPivo];
 
-    solucaoOtima = solucaoOtima - (C[colunaNumPivo]*(B[linhaPivo]/numPivo));        
+    if (eDuasFases)
+        solucaoOtimaPrimeiraFase = solucaoOtimaPrimeiraFase - (C_artificial[colunaNumPivo]*(B[linhaPivo]/numPivo));
+
+    solucaoOtima = solucaoOtima - (C[colunaNumPivo]*(B[linhaPivo]/numPivo));           
 
     for (int k = 0 ; k < colunas ; k++)
         A[linhaPivo][k] = A[linhaPivo][k] / numPivo; // Divide a linha pivô pelo número pivô.
@@ -154,16 +180,25 @@ void Simplex::realizaPivoteamento(int linhaPivo, int colunaNumPivo)
         }
     }
 
-    /* Processo análogo para o vetor de coeficientes da função objetivo. */
-
+    /* Processo análogo para o vetor de coeficientes da função objetivo. */    
     float multiplicadorLinha = C[colunaNumPivo];
 
-    for (int i = 0 ; i < C.size() ; i++)
+    for (int i = 0 ; i < colunas ; i++)
         C[i] = C[i] - (multiplicadorLinha * A[linhaPivo][i]);
+
+    if (eDuasFases)
+    {
+        multiplicadorLinha = C_artificial[colunaNumPivo];
+
+        for (int i = 0 ; i < C_artificial.size() ; i++)
+            C_artificial[i] = C_artificial[i] - (multiplicadorLinha * A[linhaPivo][i]);
+    }
 }
 
 void Simplex::printMatrizes()
 {
+    cout << "Matriz A: \n";
+
     for (int i = 0 ; i < linhas ; i++)
     {
         for (int j = 0 ; j < colunas ; j++)
@@ -171,13 +206,23 @@ void Simplex::printMatrizes()
         cout << endl;
     }
 
+    cout << "Vetor B: \n";
     for (int i = 0 ; i < B.size() ; i++)
         cout << B[i] << " | ";
 
     cout << endl;
 
+    cout << "Vetor C: \n";
     for (int i = 0 ; i < C.size() ; i++)
         cout << C[i] << " | ";
+    cout << endl;
+
+    if (eDuasFases)
+    {
+        cout << "Vetor C artificial: \n";
+        for (int i = 0 ; i < C_artificial.size() ; i++)
+            cout << C_artificial[i] << " | ";
+    }
     cout << endl;
 }
 
@@ -185,16 +230,36 @@ int Simplex::achaColunaPivo()
 {
     /* Inicializamos tomando a primeira posição como o menor elemento */
     int localizacao = 0;
-    float menor = C[0];
+    float menor;
 
-    for (int i = 1 ; i < C.size() ; i++) // Realiza um procedimento comum para encontrar o menor
+    if (eDuasFases)
     {
-        if (C[i] < menor)
+        menor = C_artificial[0];
+
+        for (int i = 1 ; i < C_artificial.size() ; i++) // Realiza um procedimento comum para encontrar o menor
         {
-            menor = C[i];
-            localizacao = i;
+            if (C_artificial[i] < menor)
+            {
+                menor = C_artificial[i];
+                localizacao = i;
+            }
         }
     }
+
+    else
+    {
+        menor = C[0];
+
+        for (int i = 1 ; i < C.size() ; i++) // Realiza um procedimento comum para encontrar o menor
+        {
+            if (C[i] < menor)
+            {
+                menor = C[i];
+                localizacao = i;
+            }
+        }
+    }
+    
 
     return localizacao;
 }
@@ -232,8 +297,110 @@ int Simplex::achaLinhaPivo(int colunaNumPivo)
     return localizacao;
 }
 
+bool Simplex::iniciaPrimeiraFase()
+{
+    vector<int> artificiais;
+    C_artificial.resize(colunas-numVarArtificiais, 0);
+
+    for (int i = 1 ; i <= numVarArtificiais ; i++)
+        C_artificial.push_back(1);
+
+    cout << "Coeficientes da função objetivo artificial: \n";
+
+    for (int i = 0 ; i < colunas ; i++)
+        cout << C_artificial[i] << " ";
+
+    cout << endl;
+
+    int k = 0;
+
+    for (int i = 0 ; i < linhas ; i++)
+    {
+        for (int j = colunas - linhas - numVarArtificiais ; j < colunas ; j++)
+        {
+            if (A[i][j] == 1)
+            {
+                base.push_back( {j, B[k]} );
+                k++;
+                break;
+            }
+        }
+        if (std::find(onde.begin(), onde.end(), i) != onde.end())
+            artificiais.push_back(i);
+    }
+    
+    for (int i = 0 ; i < base.size() ; i++)
+        cout << base[i].first << " " << base[i].second << endl;    
+
+    for (int i = 0 ; i < artificiais.size() ; i++)
+    {
+        for (int j = 0 ; j < colunas ; j++)
+            C_artificial[j] = C_artificial[j] - A[artificiais[i]][j];
+        
+        solucaoOtimaPrimeiraFase -= B[artificiais[i]];
+    }
+
+    printMatrizes();
+    cout << "\n\n\n\n\n";
+    realizaPrimeiraFase();
+    
+    return true;
+
+}
+
+bool Simplex::realizaPrimeiraFase()
+{
+    bool fim = false;
+
+    while ( !fim )
+    {
+        bool resultado = calculaIteracaoSimplex();            
+
+        if (resultado)
+            fim = true;
+    }
+    cout << "Fim da primeira fase.\n\n";
+    
+
+    if (solucaoOtimaPrimeiraFase == 0)
+    {
+        cout << "O problema possui solução.\n";
+        cout << "Iniciando a segunda fase...\n";
+        C_artificial.clear();
+
+        for (int i = 0 ; i < numVarArtificiais ; i++)
+            C.pop_back();
+
+        for (int i = 0 ; i < linhas ; i++)
+        {
+            for (int j = 0 ; j < numVarArtificiais ; j++)
+                A[i].pop_back();
+        }
+
+        colunas = C.size();
+        
+        eDuasFases = false;
+        return true;
+    }
+
+    else
+    {
+        cout << "O problema não possui solução.\n";
+        return false;
+    }
+}
+
 void Simplex::aplicaSimplex()
 {
+    if (eDuasFases)
+    {
+        cout << "O método de duas fases deve ser aplicado. Iniciando primeira fase... \n";
+        bool temSegundaFase = iniciaPrimeiraFase();
+
+        if (!temSegundaFase)
+            return;
+    }
+
     bool fim = false;
 
     cout << "Matriz de coeficientes e vetores B e C iniciais: " << endl;
