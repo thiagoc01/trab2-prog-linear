@@ -26,9 +26,9 @@ int main()
     std::cout << "Digite o número de restrições do problema:" << std::endl;
     std::cin >> tamanhoLinhaA;
 
-    std::vector <std::vector<float>> a(tamanhoLinhaA, std::vector<float>(tamanhoColunaA, 0));
-    std::vector<float> b(tamanhoLinhaA, 0);
-    std::vector<float> c(tamanhoColunaA, 0);
+    std::vector <std::vector<double>> a(tamanhoLinhaA, std::vector<double>(tamanhoColunaA, 0));
+    std::vector<double> b(tamanhoLinhaA, 0);
+    std::vector<double> c(tamanhoColunaA, 0);
 
     for (int i = 0 ; i < tamanhoLinhaA ; i++)
     {    

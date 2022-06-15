@@ -13,13 +13,13 @@ class Simplex
     private:
         int linhas, colunas; // Linhas = número de restrições ; Colunas = número de variáveis
         int numVarArtificiais; // Número de variáveis artificiais no problema
-        std::vector <std::vector<float> > A; // Matriz dos coeficientes das restrições
-        std::vector<float> B; // Vetor de soluções das restrições
-        std::vector<float> C; // Vetor de coeficientes da função objetivo.
-        std::vector< std::pair<int, float> > base; // Vetor de pares para mapearmos as bases e os B_i's respectivos
-        std::vector <float> C_artificial; // Vetor de coeficientes da função objetivo artificial da primeira fase
-        float solucaoOtima; // Solução ótima do problema
-        float solucaoOtimaPrimeiraFase; // Solução ótima da primeira fase
+        std::vector <std::vector<double> > A; // Matriz dos coeficientes das restrições
+        std::vector<double> B; // Vetor de soluções das restrições
+        std::vector<double> C; // Vetor de coeficientes da função objetivo.
+        std::vector< std::pair<int, double> > base; // Vetor de pares para mapearmos as bases e os B_i's respectivos
+        std::vector <double> C_artificial; // Vetor de coeficientes da função objetivo artificial da primeira fase
+        double solucaoOtima; // Solução ótima do problema
+        double solucaoOtimaPrimeiraFase; // Solução ótima da primeira fase
         bool eIlimitado; // Caso que o problema é ilimitado
         bool eMaximizacao; // Utilizada para verificar se o problema é de maximização ou não.
         bool semSolucao; // Caso que o problema não possui solução.
@@ -102,7 +102,7 @@ class Simplex
          * @param tipoProblema true se é de maximização, false se é de minimização.
          * @param eDuasFases true se o problema tem duas fases, false caso contrário.
          */
-        Simplex (std::vector <std::vector<float>> coeficientes, std::vector<float> b, std::vector<float> c, bool tipoProblema, bool eDuasFases, int numVarArtificiais);        
+        Simplex (std::vector <std::vector<double>> coeficientes, std::vector<double> b, std::vector<double> c, bool tipoProblema, bool eDuasFases, int numVarArtificiais);        
 
         /**
          * @brief Função que inicia o método Simplex.
