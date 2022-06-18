@@ -271,7 +271,7 @@ int Simplex::achaColunaPivo()
 
         for (int i = 1 ; i < (int) C_artificial.size() ; i++) // Realiza um procedimento comum para encontrar o menor
         {
-            if (C_artificial[i] < menor)
+            if (C_artificial[i] <= menor)
             {
                 menor = C_artificial[i];
                 localizacao = i;
@@ -285,7 +285,7 @@ int Simplex::achaColunaPivo()
 
         for (int i = 1 ; i < (int) C.size() ; i++) // Realiza um procedimento comum para encontrar o menor
         {
-            if (C[i] < menor)
+            if (C[i] <= menor)
             {
                 menor = C[i];
                 localizacao = i;
@@ -319,7 +319,7 @@ int Simplex::achaLinhaPivo(int colunaNumPivo)
     {
         if (A[i][colunaNumPivo] > 0) // Iremos testar apenas linhas que possuem coeficientes positivos na coluna pivô.
         {
-            if (B[i] / A[i][colunaNumPivo] < minimo) // Devemos encontrar o mínimo.
+            if (B[i] / A[i][colunaNumPivo] <= minimo) // Devemos encontrar o mínimo.
             {              
                 minimo =  B[i] / A[i][colunaNumPivo];
                 localizacao = i;
