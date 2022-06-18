@@ -86,7 +86,7 @@ int main()
       
     std::cout << std::endl;
 
-    Simplex simplex(a, b,c, tipoProblema, eDuasFases, numVarArtificiais);
+    Simplex simplex(a, b,c, tipoProblema, eDuasFases, numVarArtificiais, numVars);
     simplex.aplicaSimplex(ondeAdicionar);
 
     return 0;

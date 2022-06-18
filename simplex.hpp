@@ -13,6 +13,7 @@ class Simplex
     private:
         int linhas, colunas; // Linhas = número de restrições ; Colunas = número de variáveis
         int numVarArtificiais; // Número de variáveis artificiais no problema
+        int numVars; // Número de variáveis na forma canônica
         std::vector <std::vector<double> > A; // Matriz dos coeficientes das restrições
         std::vector<double> B; // Vetor de soluções das restrições
         std::vector<double> C; // Vetor de coeficientes da função objetivo.
@@ -102,7 +103,7 @@ class Simplex
          * @param tipoProblema true se é de maximização, false se é de minimização.
          * @param eDuasFases true se o problema tem duas fases, false caso contrário.
          */
-        Simplex (std::vector <std::vector<double>> coeficientes, std::vector<double> b, std::vector<double> c, bool tipoProblema, bool eDuasFases, int numVarArtificiais);        
+        Simplex (std::vector <std::vector<double>> coeficientes, std::vector<double> b, std::vector<double> c, bool tipoProblema, bool eDuasFases, int numVarArtificiais, int numVars);        
 
         /**
          * @brief Função que inicia o método Simplex.

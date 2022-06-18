@@ -7,13 +7,14 @@
 
 #include "simplex.hpp"
 
-Simplex::Simplex (std::vector <std::vector<double>> coeficientes, std::vector<double> b, std::vector<double> c, bool tipoProblema, bool eDuasFases, int numVarArtificiais)
+Simplex::Simplex (std::vector <std::vector<double>> coeficientes, std::vector<double> b, std::vector<double> c, bool tipoProblema, bool eDuasFases, int numVarArtificiais, int numVars)
 {
     solucaoOtima = solucaoOtimaPrimeiraFase = 0;
     eIlimitado = false;
     semSolucao = false;
     this->eDuasFases = eDuasFases;
     this->numVarArtificiais = numVarArtificiais;
+    this->numVars = numVars;
     linhas = coeficientes.size();
     colunas = coeficientes[0].size(); // O tamanho de uma linha indica o número de variáveis no problema.
     
@@ -46,7 +47,7 @@ Simplex::Simplex (std::vector <std::vector<double>> coeficientes, std::vector<do
     {
         int j = 0;
 
-        for (int i = colunas - linhas - numVarArtificiais ; i < (int) C.size() ; i++)
+        for (int i = numVars; i < (int) C.size() ; i++)
         {
             if (!C[i]) // As variáveis básicas têm coeficiente 0 no início do problema.
             {
@@ -115,24 +116,17 @@ bool Simplex::calculaIteracaoSimplex(int iteracao)
         std::cout << "====================================================" << std::endl;
         std::cout << solucaoOtimaPrimeiraFase << std::endl;
         std::cout << std::endl;
-        std::cout << "Solução do PPL na iteração " + std::to_string(iteracao) << std::endl;
-        std::cout << "====================================================" << std::endl;
+    }
+
+    std::cout << "Solução do PPL na iteração " + std::to_string(iteracao) << std::endl;
+    std::cout << "====================================================" << std::endl;
+
+    if (!eMaximizacao && solucaoOtima != 0)
         std::cout << solucaoOtima * -1 << std::endl;
-        std::cout << std::endl;
-    }
-
     else
-    {
-        std::cout << "Solução do PPL na iteração " + std::to_string(iteracao) << std::endl;
-        std::cout << "====================================================" << std::endl;
+        std::cout << solucaoOtima << std::endl;
 
-        if (!eMaximizacao && solucaoOtima != 0)
-            std::cout << solucaoOtima * -1 << std::endl;
-        else
-            std::cout << solucaoOtima << std::endl;
-
-        std::cout << std::endl;
-    }
+    std::cout << std::endl;
 
     
 
@@ -178,10 +172,13 @@ void Simplex::realizaPivoteamento(int linhaPivo, int colunaNumPivo)
     if (eDuasFases)
         solucaoOtimaPrimeiraFase = solucaoOtimaPrimeiraFase - (C_artificial[colunaNumPivo] * (B[linhaPivo] / numPivo));
 
-    solucaoOtima = solucaoOtima - (C[colunaNumPivo] * (B[linhaPivo] / numPivo));           
+    solucaoOtima = solucaoOtima - (C[colunaNumPivo] * (B[linhaPivo] / numPivo));
 
-    for (int k = 0 ; k < colunas ; k++)
-        A[linhaPivo][k] = A[linhaPivo][k] / numPivo; // Divide a linha pivô pelo número pivô.
+    if (!(std::fabs(numPivo - 1) <= std::numeric_limits<double>::epsilon()))
+    {
+        for (int k = 0 ; k < colunas ; k++)
+            A[linhaPivo][k] = A[linhaPivo][k] / numPivo; // Divide a linha pivô pelo número pivô.
+    }    
 
     B[linhaPivo] = B[linhaPivo] / numPivo; // O vetor B está separado, realiza a mesma ação anterior.
 
@@ -193,9 +190,16 @@ void Simplex::realizaPivoteamento(int linhaPivo, int colunaNumPivo)
         {
             double multiplicadorLinha =  A[i][colunaNumPivo]; // Capturamos o elemento que faz zerar o elemento B dessa linha.
 
+            if (multiplicadorLinha == 0)
+            {
+                if (B[i] < 0) // Se algum B[i] é menor que 0, o problema é inviável.
+                    semSolucao = true;
+                continue;
+            }
+
             B[i] = B[i] - (multiplicadorLinha * B[linhaPivo]); // Atualiza o B_i
 
-            if (B[i] < 0) // Se algum B[i] é menor que 0, o problema é inviável.
+            if (B[i] < 0)
                 semSolucao = true;
 
             base[i] = {base[i].first, B[i]}; // Atualiza no vetor de bases o valor de B_i.
@@ -205,6 +209,9 @@ void Simplex::realizaPivoteamento(int linhaPivo, int colunaNumPivo)
     for (int m = 0 ; m < linhas ; m++)
     {
         double multiplicadorLinha = A[m][colunaNumPivo]; // Capturamos o elemento que faz zerar o elemento da coluna pivô dessa linha.
+
+        if (multiplicadorLinha == 0)
+            continue;
 
         if (m != linhaPivo)
         {
@@ -216,15 +223,21 @@ void Simplex::realizaPivoteamento(int linhaPivo, int colunaNumPivo)
     /* Processo análogo para o vetor de coeficientes da função objetivo. */    
     double multiplicadorLinha = C[colunaNumPivo];
 
-    for (int i = 0 ; i < colunas ; i++)
-        C[i] = C[i] - (multiplicadorLinha * A[linhaPivo][i]);
+    if (multiplicadorLinha != 0)
+    {
+        for (int i = 0 ; i < colunas ; i++)
+            C[i] = C[i] - (multiplicadorLinha * A[linhaPivo][i]);
+    }    
 
     if (eDuasFases) // Se estamos na primeira fase, é necessário trabalhar com a função objetivo artificial.
     {
         multiplicadorLinha = C_artificial[colunaNumPivo];
 
-        for (int i = 0 ; i < (int) C_artificial.size() ; i++)
-            C_artificial[i] = C_artificial[i] - (multiplicadorLinha * A[linhaPivo][i]);
+        if (multiplicadorLinha != 0)
+        {
+            for (int i = 0 ; i < (int) C_artificial.size() ; i++)
+                C_artificial[i] = C_artificial[i] - (multiplicadorLinha * A[linhaPivo][i]);
+        }        
     }
 }
 
@@ -341,7 +354,7 @@ bool Simplex::iniciaPrimeiraFase(std::vector<int> ondeAdicionar)
 
     for (int i = 0 ; i < linhas ; i++)
     {
-        for (int j = colunas - linhas - numVarArtificiais ; j < colunas ; j++)
+        for (int j = numVars ; j < colunas ; j++)
         {
             if (A[i][j] == 1) // Se há 1 nessa linha, a variável é de folga ou artificial, deve entrar na base.
             {
